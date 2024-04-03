@@ -13,8 +13,8 @@ function main() {
 }
 
 function promptUser() {
-    rl.question('กรุณาพิมพ์คำสั่ง(ดูรายการสินค้า, ดูประเภทสินค้า, เพิ่มสินค้าในตะกร้า, ลบสินค้าในตะกร้า, แสดงสินค้าในตะกร้า, exit):  ', (user_input) => {
-        const [command, product_id] = user_input.split(' '); 
+    rl.question('กรุณาพิมพ์คำสั่ง(ดูรายการสินค้า, ดูประเภทสินค้า, เพิ่มสินค้าในตะกร้า, ลบสินค้าในตะกร้า, แสดงสินค้าในตะกร้า): ', (userInput) => {
+        const [command, product_id] = userInput.split(' '); 
         
         if (command === "ดูรายการสินค้า") {
             product_list(promptUser);
@@ -93,11 +93,19 @@ function add_product(product_id, callback) {
         if (product && product.quantity > 0) {
             product.quantity--; 
             shoppingCart.push(product); 
-            console.log(`เพิ่มสินค้า ${product.name} ในตะกร้าสำเร็จ`);
+            fs.writeFile('data.json', JSON.stringify(jsonData, null, 2), err => {
+                if (err) {
+                    console.error(err);
+                    callback();
+                    return;
+                }
+                console.log(`เพิ่มสินค้า ${product.name} ในตะกร้าสำเร็จ`);
+                callback();
+            });
         } else {
-            console.log("ไม่พบสินค้าหรือสินค้าหมด");
+            console.log("ไม่พบสินค้า");
+            callback();
         }
-        callback();
     });
 }
 
@@ -139,13 +147,24 @@ function delete_product(product_id, callback) {
 
 function cart_view(callback) {
     if (shoppingCart.length > 0) {
+        const cartItems = {};
+        shoppingCart.forEach(item => {
+            if (!cartItems[item.product_id]) {
+                cartItems[item.product_id] = { ...item, amount: 1, all_price: item.price };
+            } else {
+                cartItems[item.product_id].amount++;
+                cartItems[item.product_id].all_price += item.price;
+            }
+        });
+        
+        let totalPrice = 0;
+        Object.values(cartItems).forEach(item => {
+            totalPrice += item.all_price;
+        });
+        cartItems['รวม'] = { name: 'รวม', price: '', amount: '', all_price: totalPrice };
+
         console.log("สินค้าที่มีในตะกร้า:");
-        const formattedData = shoppingCart.map(item => ({
-            name: item.name,
-            price: item.price,
-            amount: 1, 
-            all_price: item.price * 1 
-        }));
+        const formattedData = Object.values(cartItems);
         console.table(formattedData, ["name", "price", "amount", "all_price"]);
     } else {
         console.log("ไม่มีสินค้าในตะกร้า");
