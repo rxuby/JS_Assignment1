@@ -1,2 +1,2 @@
-Basic Javascript Assignment 1
-จุฑาภรณื ไชยขันธ์ (ขิง)
+Basic Javascript Assignment1
+จุฑาภรณ์ ไชยขันธ์ (ขิง)
