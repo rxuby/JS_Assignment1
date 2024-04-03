@@ -163,7 +163,6 @@ function cart_view(callback) {
         });
         cartItems['รวม'] = { name: 'รวม', price: '', amount: '', all_price: totalPrice };
 
-        console.log("สินค้าที่มีในตะกร้า:");
         const formattedData = Object.values(cartItems);
         console.table(formattedData, ["name", "price", "amount", "all_price"]);
     } else {
