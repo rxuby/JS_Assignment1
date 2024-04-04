@@ -8,14 +8,20 @@ const rl = readline.createInterface({
 
 let shoppingCart = [];
 
+let data = fs.readFileSync('./data.json');
+let products = JSON.parse(data).map(product => {
+    return { ...product, balance: product.quantity };
+});
+
+
 function main() {
     promptUser();
 }
 
 function promptUser() {
     rl.question('กรุณาพิมพ์คำสั่ง(ดูรายการสินค้า, ดูประเภทสินค้า, เพิ่มสินค้าในตะกร้า, ลบสินค้าในตะกร้า, แสดงสินค้าในตะกร้า): ', (userInput) => {
-        const [command, product_id] = userInput.split(' '); 
-        
+        const [command, product_id] = userInput.split(' ');
+
         if (command === "ดูรายการสินค้า") {
             product_list(promptUser);
         } else if (command === "ดูประเภทสินค้า") {
@@ -27,7 +33,7 @@ function promptUser() {
         } else if (command === "แสดงสินค้าในตะกร้า") {
             cart_view(promptUser);
         } else if (command === "exit") {
-            rl.close(); 
+            rl.close();
         } else {
             console.log("คำสั่งไม่ถูกต้อง");
             promptUser();
@@ -36,22 +42,9 @@ function promptUser() {
 }
 
 function product_list(callback) {
-    fs.readFile('data.json', 'utf8', (err, data) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-
-        const jsonData = JSON.parse(data);
-        const productsWithBalance = jsonData.map(product => {
-            return { ...product, balance: product.quantity }; 
-        });
-
-        console.table(productsWithBalance, ["name", "price", "category", "quantity", "product_id", "balance"]);
-        callback();
-    });
+    console.table(products);
+    callback();
 }
-
 
 function product_type(callback) {
     fs.readFile('data.json', 'utf8', (err, data) => {
@@ -80,69 +73,39 @@ function product_type(callback) {
 }
 
 function add_product(product_id, callback) {
-    fs.readFile('data.json', 'utf8', (err, data) => {
-        if (err) {
-            console.error(err);
-            callback();
-            return;
-        }
 
-        const jsonData = JSON.parse(data);
-        const product = jsonData.find(item => item.product_id === product_id);
+    const product = products.find(item => item.product_id === product_id);
 
-        if (product && product.quantity > 0) {
-            product.quantity--; 
-            shoppingCart.push(product); 
-            fs.writeFile('data.json', JSON.stringify(jsonData, null, 2), err => {
-                if (err) {
-                    console.error(err);
-                    callback();
-                    return;
-                }
-                console.log(`เพิ่มสินค้า ${product.name} ในตะกร้าสำเร็จ`);
-                callback();
-            });
-        } else {
-            console.log("ไม่พบสินค้า");
-            callback();
-        }
-    });
+    if (product && product.balance > 0) {
+        product.balance--;
+
+        shoppingCart.push(product);
+        console.log(`เพิ่มสินค้า ${product.name} ในตะกร้าสำเร็จ`);
+    } else {
+        console.log("ไม่พบสินค้า");
+    }
+    callback();
 }
 
 function delete_product(product_id, callback) {
-    const productIndex = shoppingCart.findIndex(item => item.product_id === product_id);
+    const productCartIndex = shoppingCart.findIndex(item => item.product_id === product_id);
 
-    if (productIndex !== -1) {
-        const product = shoppingCart[productIndex];
-        shoppingCart.splice(productIndex, 1); 
-        fs.readFile('data.json', 'utf8', (err, data) => {
-            if (err) {
-                console.error(err);
-                callback();
-                return;
-            }
-            const jsonData = JSON.parse(data);
-            const originalProduct = jsonData.find(item => item.product_id === product_id);
-            if (originalProduct) {
-                originalProduct.quantity++; 
-                fs.writeFile('data.json', JSON.stringify(jsonData, null, 2), err => {
-                    if (err) {
-                        console.error(err);
-                        callback();
-                        return;
-                    }
-                    console.log(`ลบสินค้า ${product.name} ออกจากตะกร้าสำเร็จ`);
-                    callback();
-                });
-            } else {
-                console.log("ไม่พบสินค้าในตะกร้า");
-                callback();
-            }
-        });
+    if (productCartIndex !== -1) {
+        shoppingCart.splice(productCartIndex, 1);
+
+        const productIndex = products.findIndex((item) => item.product_id === product_id)
+        if (productIndex !== -1) {
+            products[productIndex].balance++
+
+            console.log(`ลบสินค้า ${products[productIndex].name} ออกจากตะกร้าสำเร็จ`);
+        } else {
+            console.log("ไม่พบสินค้า");
+        }
+
     } else {
         console.log("ไม่พบสินค้าในตะกร้า");
-        callback();
     }
+    callback();
 }
 
 function cart_view(callback) {
@@ -156,7 +119,7 @@ function cart_view(callback) {
                 cartItems[item.product_id].all_price += item.price;
             }
         });
-        
+
         let totalPrice = 0;
         Object.values(cartItems).forEach(item => {
             totalPrice += item.all_price;
